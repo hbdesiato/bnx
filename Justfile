@@ -129,12 +129,12 @@ generate-config $PROJECT_REPO=PROJECT_REPO:
     }
     EOC
     cat "${CONFIG}/containers/policy.json"
-gh-setup:
+gh-setup $PROJECT_REPO=PROJECT_REPO:
     #!/usr/bin/env bash
     set -euxo pipefail
     git config --global user.name "github-actions[bot]"
     git config --global user.email "github-actions[bot]@users.noreply.github.com"
-    just generate-config
+    just generate-config "${PROJECT_REPO}"
     umask 0077
     <<<"${SIGSTORE_PRIVATE}" cat >"keys/sigstore.private"
     <<<"" cat >"keys/sigstore.passphrase"
