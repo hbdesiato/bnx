@@ -30,8 +30,6 @@ seal $SEALED_IMAGE=SEALED_IMAGE $THIS_IMAGE=THIS_IMAGE:
     sed -i '/# Changes for development go here/a\exit 0' fedora-atomic-desktops-sealed/scripts/prepare-rootfs.sh
     rm -r fedora-atomic-desktops-sealed/keys
     ln -s ../keys fedora-atomic-desktops-sealed/keys
-    cp Containerfile.systemd-boot fedora-atomic-desktops-sealed/Containerfile.systemd-boot
-    cp Containerfile.tools fedora-atomic-desktops-sealed/Containerfile.tools
     just -ffedora-atomic-desktops-sealed/justfile dest_registry=localhost sign-systemd-boot
     just -ffedora-atomic-desktops-sealed/justfile dest_registry=localhost build-tools
     just -ffedora-atomic-desktops-sealed/justfile \
