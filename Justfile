@@ -96,6 +96,7 @@ generate-config $PROJECT_REPO=PROJECT_REPO:
         ghcr.io/ublue-os:
             use-sigstore-attachments: true
     EOC
+    cat "${CONFIG}/containers/registries.d/sigstore.yaml"
     jq >"${CONFIG}/containers/policy.json" <<EOC
     {
         "default": [
@@ -127,7 +128,7 @@ generate-config $PROJECT_REPO=PROJECT_REPO:
         }
     }
     EOC
-
+    cat "${CONFIG}/containers/policy.json"
 gh-setup:
     #!/usr/bin/env bash
     set -euxo pipefail
