@@ -26,10 +26,7 @@ jobs:
         eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
         which just || brew install just
 
-        just gh-setup
-        tree -h ~/.config/containers
-        cat ~/.config/containers/policy.json
-        cat ~/.config/containers/registries.d/sigstore.yaml 
-        # just PROJECT_REPO="ghcr.io/${GITHUB_REPOSITORY%/*}" build-seal-push
+        just PROJECT_REPO="ghcr.io/${GITHUB_REPOSITORY%/*}" gh-setup
+        just PROJECT_REPO="ghcr.io/${GITHUB_REPOSITORY%/*}" build-seal-push
 
-        # git push
+        git push
