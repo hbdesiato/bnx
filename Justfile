@@ -8,7 +8,7 @@ build $BUILD_ARGS="" $THIS_IMAGE=THIS_IMAGE $BASE_IMAGE=BASE_IMAGE:
     #!/usr/bin/env bash
     set -euxo pipefail
     podman build ${BUILD_ARGS} --build-arg BASE_IMAGE="${BASE_IMAGE}" -t "${THIS_IMAGE}" .
-    du -h
+    df -h
 
 push $THIS_IMAGE=THIS_IMAGE:
     #!/usr/bin/env bash
@@ -33,16 +33,16 @@ seal $SEALED_IMAGE=SEALED_IMAGE $THIS_IMAGE=THIS_IMAGE:
     rm -r fedora-atomic-desktops-sealed/keys
     ln -s ../keys fedora-atomic-desktops-sealed/keys
     just -ffedora-atomic-desktops-sealed/justfile dest_registry=localhost sign-systemd-boot
-    du -h
+    df -h
     just -ffedora-atomic-desktops-sealed/justfile dest_registry=localhost build-tools
-    du -h
+    df -h
     just -ffedora-atomic-desktops-sealed/justfile \
         variant_repos="( [bootc]=${THIS_IMAGE} )" \
         variant_versions="( [bootc]=latest )" \
         dest_registry=localhost \
         build bootc
     podman tag localhost/bootc:latest "${SEALED_IMAGE}"
-    du -h
+    df -h
 
 build-seal-push $SEALED_IMAGE=SEALED_IMAGE $THIS_IMAGE=THIS_IMAGE $BASE_IMAGE=BASE_IMAGE:
     just build --no-cache "${THIS_IMAGE}" "${BASE_IMAGE}"
