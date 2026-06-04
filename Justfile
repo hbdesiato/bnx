@@ -138,3 +138,45 @@ gh-setup $PROJECT_REPO=PROJECT_REPO:
     <<<"${SIGSTORE_PRIVATE}" cat >"keys/sigstore.private"
     <<<"" cat >"keys/sigstore.passphrase"
     <<<"${DB_KEY}" cat >keys/db/db.key
+
+install $IMAGE=SEALED_IMAGE:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    NAME="${IMAGE##*/}"
+    DISK_IMAGE="qemu/${NAME}.raw"
+    EFI_VARS="qemu/${NAME}_VARS_4M.secboot.qcow2"
+    which virt-fw-vars || uv tool install virt-firmware
+    mkdir -p qemu
+    chattr +C qemu || true
+    rm -f "${DISK_IMAGE}"
+    fallocate -l 20G "${DISK_IMAGE}"
+    rm -f "${EFI_VARS}"
+    virt-fw-vars -i /usr/share/edk2/ovmf/OVMF_VARS_4M.secboot.qcow2 -o "${EFI_VARS}" \
+        --add-db "$(cat keys/GUID)" keys/db/db.cer
+    sudo podman run --rm --privileged --pid=host \
+        -v "./qemu:/qemu" \
+        -v /var/lib/containers:/var/lib/containers \
+        -v /dev:/dev \
+        --security-opt label=type:unconfined_t \
+        "${IMAGE}" \
+        bootc install to-disk \
+        --composefs-backend --bootloader=systemd \
+        --filesystem btrfs \
+        --via-loopback "/${DISK_IMAGE}"
+
+run $IMAGE=SEALED_IMAGE:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    NAME="${IMAGE##*/}"
+    DISK_IMAGE="qemu/${NAME}.raw"
+    EFI_VARS="qemu/${NAME}_VARS_4M.secboot.qcow2"
+    qemu-system-x86_64 \
+        -enable-kvm \
+        -machine q35 \
+        -cpu host \
+        -smp 8 \
+        -m 8G \
+        -display gtk,gl=on -device virtio-vga-gl \
+        -drive if=pflash,format=qcow2,readonly=on,file=/usr/share/edk2/ovmf/OVMF_CODE_4M.qcow2 \
+        -drive if=pflash,format=qcow2,file="${EFI_VARS}" \
+        -drive if=virtio,format=raw,file="${DISK_IMAGE}"
