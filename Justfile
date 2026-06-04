@@ -15,6 +15,7 @@ push $THIS_IMAGE=THIS_IMAGE:
     DIGEST="${THIS_IMAGE##*/}.digest"
     podman push --sign-by-sigstore-private-key keys/sigstore.private --sign-passphrase-file keys/sigstore.passphrase \
         --digestfile="${DIGEST}" "${THIS_IMAGE}"
+    [ "${THIS_IMAGE%%/*}" = "ghcr.io" ] || exit 0
     git add "${DIGEST}"
     git commit -m "${THIS_IMAGE} pushed"
 
