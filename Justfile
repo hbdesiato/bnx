@@ -2,7 +2,7 @@ PROJECT_NAME:=`basename "$PWD"`
 PROJECT_REPO:="localhost:5000"
 THIS_IMAGE:=PROJECT_REPO+"/"+PROJECT_NAME+"-unsealed"
 SEALED_IMAGE:=PROJECT_REPO+"/"+PROJECT_NAME
-BASE_IMAGE:="ghcr.io/ublue-os/bluefin-nvidia-open:latest"
+BASE_IMAGE:="ghcr.io/ublue-os/bluefin-dx-nvidia-open:latest"
 
 build $BUILD_ARGS="" $THIS_IMAGE=THIS_IMAGE $BASE_IMAGE=BASE_IMAGE:
     #!/usr/bin/env bash
