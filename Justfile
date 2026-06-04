@@ -180,3 +180,18 @@ run $IMAGE=SEALED_IMAGE:
         -drive if=pflash,format=qcow2,readonly=on,file=/usr/share/edk2/ovmf/OVMF_CODE_4M.qcow2 \
         -drive if=pflash,format=qcow2,file="${EFI_VARS}" \
         -drive if=virtio,format=raw,file="${DISK_IMAGE}"
+
+local-registry:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    [ -e /etc/containers/registries.conf.d/localhost-5000.conf ] || sudo tee /etc/containers/registries.conf.d/localhost-5000.conf <<EOC
+    [[registry]]
+    location = "localhost:5000"
+    insecure = true
+    EOC
+    [ -e /etc/containers/registries.d/localhost-5000.yaml ] || sudo tee /etc/containers/registries.d/localhost-5000.yaml <<EOC
+    docker:
+        localhost:5000:
+            use-sigstore-attachments: true
+    EOC
+    podman run --rm --network=host registry:3
