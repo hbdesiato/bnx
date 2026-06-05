@@ -145,7 +145,7 @@ install $IMAGE=SEALED_IMAGE:
     set -euxo pipefail
     NAME="${IMAGE##*/}"
     DISK_IMAGE="qemu/${NAME}.raw"
-    EFI_VARS="qemu/${NAME}_VARS_4M.secboot.qcow2"
+    EFI_VARS="qemu/${NAME}_VARS.qcow2"
     which virt-fw-vars || uv tool install virt-firmware
     mkdir -p qemu
     chattr +C qemu || true
@@ -165,12 +165,36 @@ install $IMAGE=SEALED_IMAGE:
         --filesystem btrfs \
         --via-loopback "/${DISK_IMAGE}"
 
+install-unsealed $IMAGE=THIS_IMAGE:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    NAME="${IMAGE##*/}"
+    DISK_IMAGE="qemu/${NAME}.raw"
+    EFI_VARS="qemu/${NAME}_VARS.qcow2"
+    which virt-fw-vars || uv tool install virt-firmware
+    mkdir -p qemu
+    chattr +C qemu || true
+    rm -f "${DISK_IMAGE}"
+    fallocate -l 20G "${DISK_IMAGE}"
+    rm -f "${EFI_VARS}"
+    cp /usr/share/edk2/ovmf/OVMF_VARS_4M.qcow2 "${EFI_VARS}"
+    sudo podman run --rm --privileged --pid=host \
+        -v "./qemu:/qemu" \
+        -v /var/lib/containers:/var/lib/containers \
+        -v /dev:/dev \
+        --security-opt label=type:unconfined_t \
+        "${IMAGE}" \
+        bootc install to-disk \
+        --filesystem btrfs \
+        --via-loopback "/${DISK_IMAGE}"
+
+
 run $IMAGE=SEALED_IMAGE:
     #!/usr/bin/env bash
     set -euxo pipefail
     NAME="${IMAGE##*/}"
     DISK_IMAGE="qemu/${NAME}.raw"
-    EFI_VARS="qemu/${NAME}_VARS_4M.secboot.qcow2"
+    EFI_VARS="qemu/${NAME}_VARS.qcow2"
     qemu-system-x86_64 \
         -enable-kvm \
         -machine q35 \
@@ -181,6 +205,8 @@ run $IMAGE=SEALED_IMAGE:
         -drive if=pflash,format=qcow2,readonly=on,file=/usr/share/edk2/ovmf/OVMF_CODE_4M.qcow2 \
         -drive if=pflash,format=qcow2,file="${EFI_VARS}" \
         -drive if=virtio,format=raw,file="${DISK_IMAGE}"
+
+run-unsealed: (run THIS_IMAGE) 
 
 local-registry:
     #!/usr/bin/env bash
