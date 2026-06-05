@@ -1,0 +1,4 @@
+#!/bin/sh
+SCHEME="$(gsettings get org.gnome.desktop.interface color-scheme)"
+[ "$SCHEME" != "'prefer-dark'" ] || export GTK_THEME=Adwaita-dark
+exec $@

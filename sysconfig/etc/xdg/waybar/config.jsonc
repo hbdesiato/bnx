@@ -194,7 +194,7 @@
             "car": "",
             "default": ["", "", ""]
         },
-        "on-click": "pavucontrol"
+        "on-click": "gtk-color-scheme-wrapper pavucontrol"
     },
     "custom/media": {
         "format": "{icon} {text}",
