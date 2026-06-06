@@ -140,6 +140,8 @@ gh-setup $PROJECT_REPO=PROJECT_REPO:
     <<<"" cat >"keys/sigstore.passphrase"
     <<<"${DB_KEY}" cat >keys/db/db.key
 
+INSTALL_DISK_SIZE:="40G"
+
 install $IMAGE=SEALED_IMAGE:
     #!/usr/bin/env bash
     set -euxo pipefail
@@ -150,7 +152,7 @@ install $IMAGE=SEALED_IMAGE:
     mkdir -p qemu
     chattr +C qemu || true
     rm -f "${DISK_IMAGE}"
-    fallocate -l 20G "${DISK_IMAGE}"
+    fallocate -l "{{INSTALL_DISK_SIZE}}" "${DISK_IMAGE}"
     rm -f "${EFI_VARS}"
     virt-fw-vars -i /usr/share/edk2/ovmf/OVMF_VARS_4M.secboot.qcow2 -o "${EFI_VARS}" \
         --add-db "$(cat keys/GUID)" keys/db/db.cer
@@ -165,6 +167,14 @@ install $IMAGE=SEALED_IMAGE:
         --filesystem btrfs \
         --via-loopback "/${DISK_IMAGE}"
 
+install-ghcr $PROJECT_NAME=PROJECT_NAME:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    REPO_URL="$(git remote get-url origin)"
+    REPO_BASE_URL="${REPO_URL%/*}"
+    REPO_BASE="${REPO_BASE_URL##*[:/]}"
+    just install "ghcr.io/${REPO_BASE}/${PROJECT_NAME}"
+
 install-unsealed $IMAGE=THIS_IMAGE:
     #!/usr/bin/env bash
     set -euxo pipefail
@@ -175,7 +185,7 @@ install-unsealed $IMAGE=THIS_IMAGE:
     mkdir -p qemu
     chattr +C qemu || true
     rm -f "${DISK_IMAGE}"
-    fallocate -l 20G "${DISK_IMAGE}"
+    fallocate -l "{{INSTALL_DISK_SIZE}}" "${DISK_IMAGE}"
     rm -f "${EFI_VARS}"
     cp /usr/share/edk2/ovmf/OVMF_VARS_4M.qcow2 "${EFI_VARS}"
     sudo podman run --rm --privileged --pid=host \
@@ -189,7 +199,7 @@ install-unsealed $IMAGE=THIS_IMAGE:
         --via-loopback "/${DISK_IMAGE}"
 
 
-run $IMAGE=SEALED_IMAGE:
+run $IMAGE=PROJECT_NAME:
     #!/usr/bin/env bash
     set -euxo pipefail
     NAME="${IMAGE##*/}"
