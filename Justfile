@@ -118,7 +118,7 @@ generate-config $PROJECT_REPO=PROJECT_REPO:
                 "ghcr.io/ublue-os": [
                     {
                         "type": "sigstoreSigned",
-                        "keyPath": "$(realpath ublue-os.pub)",
+                        "keyPath": "$(realpath keys/ublue-os.pub)",
                         "signedIdentity": {
                             "type": "matchRepository"
                         }
