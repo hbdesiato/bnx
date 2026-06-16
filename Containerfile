@@ -22,6 +22,8 @@ jq \
         }
     ]' /etc/containers/policy.json >/etc/containers/policy.new.json
 mv /etc/containers/policy.new.json /etc/containers/policy.json
-dnf -y install niri mako swaybg swayidle polkit-kde kf6-kirigami udiskie libappindicator-gtk3 brightnessctl pavucontrol blueman network-manager-applet
+dnf -y install niri mako swaybg swayidle polkit-kde kf6-kirigami udiskie \
+    libappindicator-gtk3 brightnessctl pavucontrol blueman network-manager-applet \
+    qemu-system-x86
 EORUN
 COPY sysconfig /
