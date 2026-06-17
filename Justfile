@@ -186,13 +186,13 @@ install $IMAGE=SEALED_IMAGE:
         --filesystem btrfs \
         --via-loopback "/${DISK_IMAGE}"
 
-install-ghcr $PROJECT_NAME=PROJECT_NAME:
+install-ghcr $IMAGE_NAME=PROJECT_NAME:
     #!/usr/bin/env bash
-    set -euxo pipefail
+    set -euo pipefail
     REPO_URL="$(git remote get-url origin)"
     REPO_BASE_URL="${REPO_URL%/*}"
     REPO_BASE="${REPO_BASE_URL##*[:/]}"
-    just install "ghcr.io/${REPO_BASE}/${PROJECT_NAME}"
+    just install "ghcr.io/${REPO_BASE}/${IMAGE_NAME}"
 
 install-unsealed $IMAGE=THIS_IMAGE:
     #!/usr/bin/env bash
