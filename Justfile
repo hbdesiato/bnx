@@ -217,7 +217,6 @@ install-unsealed $IMAGE=THIS_IMAGE:
         --filesystem btrfs \
         --via-loopback "/${DISK_IMAGE}"
 
-
 run $IMAGE=PROJECT_NAME:
     #!/usr/bin/env bash
     set -euxo pipefail
@@ -250,4 +249,97 @@ local-registry:
         localhost:5000:
             use-sigstore-attachments: true
     EOC
-    podman run --rm --network=host registry:3
+    podman run --rm --network=pasta:--no-splice -p 127.0.0.1:5000:5000 registry:3
+
+to-disk-partitions:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    PARTS_JSON="$(sudo lsblk -o NAME,PARTTYPE,PARTLABEL --json | jq '
+        .blockdevices[] |
+        select(.children != null) |
+        select(.children | any(.partlabel == "bootc-TARGET" ) )')"
+    <<< "$PARTS_JSON" jq -r '
+        .children[] | 
+        select(.parttype == "c12a7328-f81f-11d2-ba4b-00a0c93ec93b") |
+        "EFI_PART="+.name'
+    <<< "$PARTS_JSON" jq -r '
+        .children[] | 
+        select(.parttype == "4f68bce3-e8cd-4db1-96e7-fbcaf984b709") |
+        "ROOT_PART="+.name'
+
+to-disk-luks:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    eval "$(just to-disk-partitions)"
+    echo $EFI_PART
+    echo $ROOT_PART
+    LUKS_VOL="luks-${ROOT_PART}"
+    sudo systemd-cryptsetup detach "${LUKS_VOL}"
+    sudo cryptsetup erase "/dev/${ROOT_PART}"
+    KEY_FILE="$(mktemp)"
+    openssl rand -base64 32 > "${KEY_FILE}"
+    sudo cryptsetup luksFormat "/dev/${ROOT_PART}" "${KEY_FILE}"
+    sudo systemd-cryptsetup attach "${LUKS_VOL}" "/dev/${ROOT_PART}" "${KEY_FILE}"
+    sudo systemd-cryptenroll --unlock-key-file "${KEY_FILE}" --recovery-key "/dev/${ROOT_PART}"
+    sudo systemd-cryptenroll --unlock-key-file "${KEY_FILE}" --tpm2-device auto --tpm2-with-pin true "/dev/${ROOT_PART}"
+    sudo systemd-cryptenroll --unlock-key-file "${KEY_FILE}" --wipe-slot password "/dev/${ROOT_PART}"
+    rm -f "${KEY_FILE}"
+
+to-disk-format:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    eval "$(just to-disk-partitions)"
+    if sudo cryptsetup isLuks "/dev/${ROOT_PART}"; then
+        LUKS_VOL="luks-${ROOT_PART}"
+        sudo systemd-cryptsetup attach "${LUKS_VOL}" "/dev/${ROOT_PART}"
+        ROOT_DEV="/dev/mapper/${LUKS_VOL}"
+    else
+        ROOT_DEV="/dev/${ROOT_PART}"
+    fi
+    mkdir -p to-disk/root
+    sudo umount -R to-disk/root || true
+    sudo mkfs.btrfs -f "${ROOT_DEV}"
+    sudo mkfs.fat -F32 "/dev/${EFI_PART}"
+
+to-disk-mount:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    eval "$(just to-disk-partitions)"
+    if sudo cryptsetup isLuks "/dev/${ROOT_PART}"; then
+        LUKS_VOL="luks-${ROOT_PART}"
+        sudo systemd-cryptsetup attach "${LUKS_VOL}" "/dev/${ROOT_PART}"
+        ROOT_DEV="/dev/mapper/${LUKS_VOL}"
+    else
+        ROOT_DEV="/dev/${ROOT_PART}"
+    fi
+    sudo mount "${ROOT_DEV}" to-disk/root
+    sudo mkdir -p to-disk/root/boot
+    sudo mount -o umask=0077 "/dev/${EFI_PART}" to-disk/root/boot
+
+to-disk-unmount:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    sudo umount -R to-disk/root || true
+    eval "$(just to-disk-partitions)"
+    if sudo cryptsetup isLuks "/dev/${ROOT_PART}"; then
+        LUKS_VOL="luks-${ROOT_PART}"
+        sudo systemd-cryptsetup detach "${LUKS_VOL}"
+    fi
+
+install-to-disk $IMAGE_NAME=PROJECT_NAME: to-disk-mount && to-disk-unmount
+    #!/usr/bin/env bash
+    set -euo pipefail
+    REPO_URL="$(git remote get-url origin)"
+    REPO_BASE_URL="${REPO_URL%/*}"
+    REPO_BASE="${REPO_BASE_URL##*[:/]}"
+    IMAGE="ghcr.io/${REPO_BASE}/${IMAGE_NAME}"
+    sudo podman run --rm --privileged --pid=host \
+        -v /dev:/dev \
+        -v "./to-disk/root":/target \
+        -v /var/lib/containers:/var/lib/containers \
+        --security-opt label=type:unconfined_t \
+        "${IMAGE}" \
+        bootc install to-filesystem \
+        --composefs-backend --bootloader=systemd \
+        --skip-finalize \
+        /target

@@ -3,3 +3,4 @@
 *.passphrase
 /fedora-atomic-desktops-sealed/
 /qemu/
+/to-disk/
