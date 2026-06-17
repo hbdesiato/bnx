@@ -38,14 +38,32 @@ seal $SEALED_IMAGE=SEALED_IMAGE $THIS_IMAGE=THIS_IMAGE:
         variant_repos="( [bootc]=${THIS_IMAGE} )" \
         variant_versions="( [bootc]=latest )" \
         dest_registry=localhost \
-        build bootc
+        build-base bootc
+    just -ffedora-atomic-desktops-sealed/justfile \
+        variant_repos="( [bootc]=${THIS_IMAGE} )" \
+        variant_versions="( [bootc]=latest )" \
+        dest_registry=localhost \
+        build-uki bootc
     podman tag localhost/bootc:latest "${SEALED_IMAGE}"
+
+seal-gpu $GPU $SEALED_IMAGE=SEALED_IMAGE $THIS_IMAGE=THIS_IMAGE:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    just -ffedora-atomic-desktops-sealed/justfile \
+        variant_repos="( [bootc]=${THIS_IMAGE} )" \
+        variant_versions="( [bootc]=latest )" \
+        dest_registry=localhost \
+        build-uki bootc "${GPU}"
+    podman tag "localhost/bootc-${GPU}:latest" "${SEALED_IMAGE}-${GPU}"
+
 
 build-seal-push $SEALED_IMAGE=SEALED_IMAGE $THIS_IMAGE=THIS_IMAGE $BASE_IMAGE=BASE_IMAGE:
     just build --no-cache "${THIS_IMAGE}" "${BASE_IMAGE}"
     just push "${THIS_IMAGE}"
     just seal "${SEALED_IMAGE}" "${THIS_IMAGE}"
     just push "${SEALED_IMAGE}"
+    just seal-gpu intel "${SEALED_IMAGE}" "${THIS_IMAGE}"
+    just push "${SEALED_IMAGE}-intel"
 
 update $SEALED_IMAGE=SEALED_IMAGE $THIS_IMAGE=THIS_IMAGE $BASE_IMAGE=BASE_IMAGE:
     #!/usr/bin/env bash
