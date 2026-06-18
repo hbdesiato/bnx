@@ -28,7 +28,8 @@ seal $SEALED_IMAGE=SEALED_IMAGE $THIS_IMAGE=THIS_IMAGE:
     else
         git clone https://github.com/travier/fedora-atomic-desktops-sealed
     fi
-    sed -i '/# Changes for development go here/a\exit 0' fedora-atomic-desktops-sealed/scripts/prepare-rootfs.sh
+    sed -i '/# Changes for development go here/,$d' fedora-atomic-desktops-sealed/scripts/prepare-rootfs.sh
+    cat fads/prepare-rootfs.sh >> fedora-atomic-desktops-sealed/scripts/prepare-rootfs.sh
     sed -i '/systemd\.debug_shell/s/^/#/' fedora-atomic-desktops-sealed/scripts/uki.sh
     rm -r fedora-atomic-desktops-sealed/keys
     ln -s ../keys fedora-atomic-desktops-sealed/keys
