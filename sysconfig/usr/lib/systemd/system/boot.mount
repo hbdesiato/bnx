@@ -1,9 +1,0 @@
-[Unit]
-Before=local-fs.target
-After=blockdev@dev-disk-by\x2ddesignator-esp.target
-
-[Mount]
-What=/dev/disk/by-designator/esp
-Where=/boot
-Type=vfat
-Options=fmask=0177,dmask=0077,nodev,nosuid,noexec
