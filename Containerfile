@@ -34,4 +34,7 @@ RUN \
 <<EORUN
 mkdir -p /usr/local/bin /usr/local/etc /usr/local/games /usr/local/include \
     /usr/local/lib /usr/local/sbin /usr/local/share /usr/local/src
+sed -i 's| /root| /var/roothome|g' /usr/lib/tmpfiles.d/*.conf
+sed -i 's| /home| /var/home|g' /usr/lib/tmpfiles.d/*.conf
+sed -i 's| /srv| /var/srv|g' /usr/lib/tmpfiles.d/*.conf
 EORUN
