@@ -27,3 +27,11 @@ dnf -y install niri mako swaybg swayidle polkit-kde kf6-kirigami udiskie \
     qemu-system-x86 qemu-img
 EORUN
 COPY sysconfig /
+RUN \
+    --mount=type=tmpfs,target=/run \
+    --mount=type=tmpfs,target=/tmp \
+    --mount=type=tmpfs,target=/var \
+<<EORUN
+mkdir -p /usr/local/bin /usr/local/etc /usr/local/games /usr/local/include \
+    /usr/local/lib /usr/local/sbin /usr/local/share /usr/local/src
+EORUN
