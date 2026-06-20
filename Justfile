@@ -176,6 +176,7 @@ install $IMAGE=SEALED_IMAGE:
     virt-fw-vars -i /usr/share/edk2/ovmf/OVMF_VARS_4M.secboot.qcow2 -o "${EFI_VARS}" \
         --add-db "$(cat keys/GUID)" keys/db/db.cer
     sudo podman run --rm --privileged --pid=host \
+        --pull=newer \
         -v "./qemu:/qemu" \
         -v /var/lib/containers:/var/lib/containers \
         -v /dev:/dev \
@@ -208,6 +209,7 @@ install-unsealed $IMAGE=THIS_IMAGE:
     rm -f "${EFI_VARS}"
     cp /usr/share/edk2/ovmf/OVMF_VARS_4M.qcow2 "${EFI_VARS}"
     sudo podman run --rm --privileged --pid=host \
+        --pull=newer \
         -v "./qemu:/qemu" \
         -v /var/lib/containers:/var/lib/containers \
         -v /dev:/dev \
@@ -334,6 +336,7 @@ install-to-disk $IMAGE_NAME=PROJECT_NAME: to-disk-mount && to-disk-unmount
     REPO_BASE="${REPO_BASE_URL##*[:/]}"
     IMAGE="ghcr.io/${REPO_BASE}/${IMAGE_NAME}"
     sudo podman run --rm --privileged --pid=host \
+        --pull=newer \
         -v /dev:/dev \
         -v "./to-disk/root":/target \
         -v /var/lib/containers:/var/lib/containers \
