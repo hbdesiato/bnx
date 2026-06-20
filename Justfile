@@ -9,15 +9,17 @@ build $BUILD_ARGS="" $THIS_IMAGE=THIS_IMAGE $BASE_IMAGE=BASE_IMAGE:
     set -euxo pipefail
     podman build ${BUILD_ARGS} --build-arg BASE_IMAGE="${BASE_IMAGE}" -t "${THIS_IMAGE}" .
 
-push $THIS_IMAGE=THIS_IMAGE:
+push $IMAGE=SEALED_IMAGE:
     #!/usr/bin/env bash
     set -euxo pipefail
-    DIGEST="${THIS_IMAGE##*/}.digest"
+    DIGEST="${IMAGE##*/}.digest"
     podman push --sign-by-sigstore-private-key keys/sigstore.private --sign-passphrase-file keys/sigstore.passphrase \
-        --digestfile="${DIGEST}" "${THIS_IMAGE}"
-    [ "${THIS_IMAGE%%/*}" = "ghcr.io" ] || exit 0
+        --digestfile="${DIGEST}" "${IMAGE}"
+    [ "${IMAGE%%/*}" = "ghcr.io" ] || exit 0
     git add "${DIGEST}"
-    git commit -m "${THIS_IMAGE} pushed"
+    git commit -m "${IMAGE} pushed"
+
+push-unsealed: (push THIS_IMAGE) 
 
 seal $SEALED_IMAGE=SEALED_IMAGE $THIS_IMAGE=THIS_IMAGE:
     #!/usr/bin/env bash
