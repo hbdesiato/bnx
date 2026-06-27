@@ -171,6 +171,7 @@ install $IMAGE=SEALED_IMAGE:
     NAME="${NAME%:*}"
     DISK_IMAGE="qemu/${NAME}.raw"
     EFI_VARS="qemu/${NAME}_VARS.qcow2"
+    TPM_DIR="qemu/${NAME}.tpm"
     which virt-fw-vars || uv tool install virt-firmware
     mkdir -p qemu
     chattr +C qemu || true
@@ -179,6 +180,8 @@ install $IMAGE=SEALED_IMAGE:
     rm -f "${EFI_VARS}"
     virt-fw-vars -i /usr/share/edk2/ovmf/OVMF_VARS_4M.secboot.qcow2 -o "${EFI_VARS}" \
         --add-db "$(cat keys/GUID)" keys/db/db.cer
+    rm -rf "${TPM_DIR}"
+    mkdir -p "${TPM_DIR}"
     sudo podman run --rm --privileged --pid=host \
         --pull=newer \
         -v "./qemu:/qemu" \
@@ -206,6 +209,7 @@ install-unsealed $IMAGE=THIS_IMAGE:
     NAME="${NAME%:*}"
     DISK_IMAGE="qemu/${NAME}.raw"
     EFI_VARS="qemu/${NAME}_VARS.qcow2"
+    TPM_DIR="qemu/${NAME}.tpm"
     which virt-fw-vars || uv tool install virt-firmware
     mkdir -p qemu
     chattr +C qemu || true
@@ -213,6 +217,8 @@ install-unsealed $IMAGE=THIS_IMAGE:
     fallocate -l "{{INSTALL_DISK_SIZE}}" "${DISK_IMAGE}"
     rm -f "${EFI_VARS}"
     cp /usr/share/edk2/ovmf/OVMF_VARS_4M.qcow2 "${EFI_VARS}"
+    rm -rf "${TPM_DIR}"
+    mkdir -p "${TPM_DIR}"
     sudo podman run --rm --privileged --pid=host \
         --pull=newer \
         -v "./qemu:/qemu" \
@@ -231,6 +237,9 @@ run $IMAGE=PROJECT_NAME:
     NAME="${NAME%:*}"
     DISK_IMAGE="qemu/${NAME}.raw"
     EFI_VARS="qemu/${NAME}_VARS.qcow2"
+    TPM_DIR="qemu/${NAME}.tpm"
+    TPM_SOCKET="${TPM_DIR}/swtpm-sock"
+    swtpm socket --tpmstate dir="${TPM_DIR}" --ctrl type=unixio,path="${TPM_SOCKET}" --tpm2 &
     qemu-system-x86_64 \
         -enable-kvm \
         -machine q35 \
@@ -238,6 +247,7 @@ run $IMAGE=PROJECT_NAME:
         -smp 8 \
         -m 8G \
         -display gtk,gl=on -device virtio-vga-gl \
+        -chardev socket,id=chrtpm,path="${TPM_SOCKET}" -tpmdev emulator,id=tpm0,chardev=chrtpm -device tpm-crb,tpmdev=tpm0,id=tpm0 \
         -drive if=pflash,format=qcow2,readonly=on,file=/usr/share/edk2/ovmf/OVMF_CODE_4M.qcow2 \
         -drive if=pflash,format=qcow2,file="${EFI_VARS}" \
         -drive if=virtio,format=raw,file="${DISK_IMAGE}"
