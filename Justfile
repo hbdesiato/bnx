@@ -13,9 +13,11 @@ push $IMAGE=SEALED_IMAGE:
     #!/usr/bin/env bash
     set -euxo pipefail
     DIGEST="${IMAGE##*/}.digest"
+    mkdir -p build
     podman push --sign-by-sigstore-private-key keys/sigstore.private --sign-passphrase-file keys/sigstore.passphrase \
-        --digestfile="${DIGEST}" "${IMAGE}"
+        --digestfile="build/${DIGEST}" "${IMAGE}"
     [ "${IMAGE%%/*}" = "ghcr.io" ] || exit 0
+    mv build/${DIGEST} ${DIGEST}
     git add "${DIGEST}"
     git commit -m "${IMAGE} pushed"
 
