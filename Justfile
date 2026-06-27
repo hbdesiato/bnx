@@ -34,7 +34,6 @@ seal $SEALED_IMAGE=SEALED_IMAGE $THIS_IMAGE=THIS_IMAGE:
     sed -i '/systemd\.debug_shell/s/^/#/' fedora-atomic-desktops-sealed/scripts/uki.sh
     rm -r fedora-atomic-desktops-sealed/keys
     ln -s ../keys fedora-atomic-desktops-sealed/keys
-    just -ffedora-atomic-desktops-sealed/justfile dest_registry=localhost sign-systemd-boot
     just -ffedora-atomic-desktops-sealed/justfile dest_registry=localhost build-tools
     just -ffedora-atomic-desktops-sealed/justfile \
         variant_repos="( [bootc]=${THIS_IMAGE} )" \
