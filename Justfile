@@ -168,6 +168,7 @@ install $IMAGE=SEALED_IMAGE:
     #!/usr/bin/env bash
     set -euxo pipefail
     NAME="${IMAGE##*/}"
+    NAME="${NAME%:*}"
     DISK_IMAGE="qemu/${NAME}.raw"
     EFI_VARS="qemu/${NAME}_VARS.qcow2"
     which virt-fw-vars || uv tool install virt-firmware
@@ -202,6 +203,7 @@ install-unsealed $IMAGE=THIS_IMAGE:
     #!/usr/bin/env bash
     set -euxo pipefail
     NAME="${IMAGE##*/}"
+    NAME="${NAME%:*}"
     DISK_IMAGE="qemu/${NAME}.raw"
     EFI_VARS="qemu/${NAME}_VARS.qcow2"
     which virt-fw-vars || uv tool install virt-firmware
@@ -226,6 +228,7 @@ run $IMAGE=PROJECT_NAME:
     #!/usr/bin/env bash
     set -euxo pipefail
     NAME="${IMAGE##*/}"
+    NAME="${NAME%:*}"
     DISK_IMAGE="qemu/${NAME}.raw"
     EFI_VARS="qemu/${NAME}_VARS.qcow2"
     qemu-system-x86_64 \
