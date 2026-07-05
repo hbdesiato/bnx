@@ -27,7 +27,6 @@ push $IMAGE=SEALED_IMAGE:
 
 push-unsealed: (push THIS_IMAGE) 
 
-FORMAT_DIGEST:='{{.Digest}}'
 seal $SEALED_IMAGE=SEALED_IMAGE $THIS_IMAGE=THIS_IMAGE:
     #!/usr/bin/env bash
     set -euxo pipefail
