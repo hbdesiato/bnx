@@ -47,7 +47,11 @@ seal $SEALED_IMAGE=SEALED_IMAGE $THIS_IMAGE=THIS_IMAGE:
         -v ./build/chunkah:/build \
         "${THIS_IMAGE}-splitter" cp -a /out /build/.
 
+    podman image rm "${THIS_IMAGE}-splitter"
+
+    podman build --build-arg BASE_IMAGE="oci:build/chunkah/out" \
         --build-arg KARGS="quiet rhgb" \
+        --security-opt label=disable \
         --secret=id=secureboot_key,src=keys/db/db.key \
         --secret=id=secureboot_cert,src=keys/db/db.pem \
         -f Containerfile.seal \
