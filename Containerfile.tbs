@@ -1,0 +1,41 @@
+ARG BASE_IMAGE
+FROM $BASE_IMAGE as base
+COPY tbsconfig /
+RUN \
+    --mount=type=tmpfs,target=/run \
+    --mount=type=tmpfs,target=/tmp \
+    --mount=type=tmpfs,target=/var \
+    --mount=type=secret,id=secureboot_key \
+    --mount=type=secret,id=secureboot_cert \
+<<EORUN
+set -euxo pipefail
+
+mkdir -p /var/tmp
+
+kver=$(ls /usr/lib/modules)
+dracut -vf "/usr/lib/modules/${kver}/initramfs.img" "$kver"
+
+rm -rf /var/cache
+bootc container lint
+
+rm -rf /ostree
+rm -rf /sysroot/ostree
+
+EORUN
+
+FROM base
+ARG CONFIG_FILE
+COPY $CONFIG_FILE /config.json
+RUN \
+    --mount=type=tmpfs,target=/run --mount=type=tmpfs,target=/tmp \
+    --mount=type=bind,from=base,target=/target \
+<<EORUN
+set -euxo pipefail
+
+chunkah build \
+  --rootfs /target \
+  --max-layers 256 \
+  --config /config.json \
+  --output oci:/out
+
+EORUN

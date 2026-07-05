@@ -37,13 +37,13 @@ seal $SEALED_IMAGE=SEALED_IMAGE $THIS_IMAGE=THIS_IMAGE:
 
     podman build --build-arg BASE_IMAGE="$THIS_IMAGE" \
         --build-arg CONFIG_FILE="$CONFIG_FILE" \
-        -f Containerfile.chunk \
-        -t "${THIS_IMAGE}-chunked" .
+        -f Containerfile.tbs \
+        -t "${THIS_IMAGE}-tbs" .
     
     podman run --rm \
         --security-opt label=disable \
         -v ./build/chunkah:/build \
-        "${THIS_IMAGE}-chunked" cp -a /out /build/.
+        "${THIS_IMAGE}-tbs" cp -a /out /build/.
 
     podman build --build-arg BASE_IMAGE="oci:build/chunkah/out" \
         --build-arg KARGS="quiet rhgb" \

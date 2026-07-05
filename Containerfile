@@ -35,6 +35,8 @@ RUN \
     --mount=type=secret,id=secureboot_key \
     --mount=type=secret,id=secureboot_cert \
 <<EORUN
+set -euxo pipefail
+
 mkdir -p /usr/local/bin /usr/local/etc /usr/local/games /usr/local/include \
     /usr/local/lib /usr/local/sbin /usr/local/share /usr/local/src /var/tmp
 sed -i 's| /root| /var/roothome|g' /usr/lib/tmpfiles.d/*.conf
@@ -47,11 +49,7 @@ sbsign \
   /usr/lib/systemd/boot/efi/systemd-bootx64.efi
 
 kver=$(ls /usr/lib/modules)
-dracut -vf "/usr/lib/modules/${kver}/initramfs.img" "$kver"
 
 rm -rf /var/cache
 bootc container lint
-rm -rf /ostree
-rm -rf /sysroot/ostree
-
 EORUN
