@@ -142,6 +142,8 @@ generate-config $PROJECT_REPO=PROJECT_REPO:
 gh-setup $PROJECT_REPO=PROJECT_REPO:
     #!/usr/bin/env bash
     set -euxo pipefail
+    which cosign || brew install cosign
+    
     git config --global user.name "github-actions[bot]"
     git config --global user.email "github-actions[bot]@users.noreply.github.com"
     just generate-config "${PROJECT_REPO}"
