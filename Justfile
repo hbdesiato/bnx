@@ -7,7 +7,11 @@ BASE_IMAGE:="ghcr.io/ublue-os/bluefin-nvidia-open:stable-daily"
 build $BUILD_ARGS="" $THIS_IMAGE=THIS_IMAGE $BASE_IMAGE=BASE_IMAGE:
     #!/usr/bin/env bash
     set -euxo pipefail
-    podman build ${BUILD_ARGS} --build-arg BASE_IMAGE="${BASE_IMAGE}" -t "${THIS_IMAGE}" .
+    podman build ${BUILD_ARGS} \
+        --build-arg BASE_IMAGE="${BASE_IMAGE}" \
+        --secret=id=secureboot_key,src=keys/db/db.key \
+        --secret=id=secureboot_cert,src=keys/db/db.pem \
+        -t "${THIS_IMAGE}" .
 
 push $IMAGE=SEALED_IMAGE:
     #!/usr/bin/env bash
@@ -26,47 +30,31 @@ push-unsealed: (push THIS_IMAGE)
 seal $SEALED_IMAGE=SEALED_IMAGE $THIS_IMAGE=THIS_IMAGE:
     #!/usr/bin/env bash
     set -euxo pipefail
-    if [ -e fedora-atomic-desktops-sealed ]; then
-        git -C fedora-atomic-desktops-sealed fetch
-        git -C fedora-atomic-desktops-sealed reset --hard
-    else
-        git clone https://github.com/travier/fedora-atomic-desktops-sealed
-    fi
-    sed -i '/# Changes for development go here/,$d' fedora-atomic-desktops-sealed/scripts/prepare-rootfs.sh
-    sed -i '/systemd\.debug_shell/s/^/#/' fedora-atomic-desktops-sealed/scripts/uki.sh
-    rm -r fedora-atomic-desktops-sealed/keys
-    ln -s ../keys fedora-atomic-desktops-sealed/keys
-    just -ffedora-atomic-desktops-sealed/justfile dest_registry=localhost build-tools
-    just -ffedora-atomic-desktops-sealed/justfile \
-        variant_repos="( [bootc]=${THIS_IMAGE} )" \
-        variant_versions="( [bootc]=latest )" \
-        dest_registry=localhost \
-        build-base bootc
-    just -ffedora-atomic-desktops-sealed/justfile \
-        variant_repos="( [bootc]=${THIS_IMAGE} )" \
-        variant_versions="( [bootc]=latest )" \
-        dest_registry=localhost \
-        build-uki bootc
-    podman tag localhost/bootc:latest "${SEALED_IMAGE}"
-
-seal-gpu $GPU $SEALED_IMAGE=SEALED_IMAGE $THIS_IMAGE=THIS_IMAGE:
-    #!/usr/bin/env bash
-    set -euxo pipefail
-    just -ffedora-atomic-desktops-sealed/justfile \
-        variant_repos="( [bootc]=${THIS_IMAGE} )" \
-        variant_versions="( [bootc]=latest )" \
-        dest_registry=localhost \
-        build-uki bootc "${GPU}"
-    podman tag "localhost/bootc-${GPU}:latest" "${SEALED_IMAGE}-${GPU}"
-
+    mkdir -p build
+    rm -rf build/chunkah
+    podman inspect $THIS_IMAGE > build/chunkah.json
+    cosign verify \
+        --certificate-oidc-issuer https://token.actions.githubusercontent.com \
+        --certificate-identity-regexp '^https://github\.com/coreos/chunkah/' \
+        quay.io/coreos/chunkah:latest
+    podman run --rm --mount=type=image,src=$THIS_IMAGE,dest=/chunkah \
+        -v ./build:/build:z \
+        quay.io/coreos/chunkah build \
+        --max-layers 256 \
+        --config /build/chunkah.json \
+        --output oci:/build/chunkah
+    podman build --build-arg BASE_IMAGE="oci:build/chunkah" \
+        --build-arg KARGS="quiet rhgb" \
+        --secret=id=secureboot_key,src=keys/db/db.key \
+        --secret=id=secureboot_cert,src=keys/db/db.pem \
+        -f Containerfile.seal \
+        -t "${SEALED_IMAGE}" .
 
 build-seal-push $SEALED_IMAGE=SEALED_IMAGE $THIS_IMAGE=THIS_IMAGE $BASE_IMAGE=BASE_IMAGE:
     just build --no-cache "${THIS_IMAGE}" "${BASE_IMAGE}"
     just push "${THIS_IMAGE}"
     just seal "${SEALED_IMAGE}" "${THIS_IMAGE}"
     just push "${SEALED_IMAGE}"
-    just seal-gpu intel "${SEALED_IMAGE}" "${THIS_IMAGE}"
-    just push "${SEALED_IMAGE}-intel"
 
 update $SEALED_IMAGE=SEALED_IMAGE $THIS_IMAGE=THIS_IMAGE $BASE_IMAGE=BASE_IMAGE:
     #!/usr/bin/env bash

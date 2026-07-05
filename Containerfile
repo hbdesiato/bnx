@@ -24,17 +24,34 @@ jq \
 mv /etc/containers/policy.new.json /etc/containers/policy.json
 dnf -y install niri mako swaybg swayidle polkit-kde kf6-kirigami udiskie \
     libappindicator-gtk3 brightnessctl pavucontrol blueman network-manager-applet \
-    qemu-system-x86 qemu-img
+    qemu-system-x86 qemu-img \
+    systemd-boot-unsigned sbsigntools systemd-ukify
 EORUN
 COPY sysconfig /
 RUN \
     --mount=type=tmpfs,target=/run \
     --mount=type=tmpfs,target=/tmp \
     --mount=type=tmpfs,target=/var \
+    --mount=type=secret,id=secureboot_key \
+    --mount=type=secret,id=secureboot_cert \
 <<EORUN
 mkdir -p /usr/local/bin /usr/local/etc /usr/local/games /usr/local/include \
-    /usr/local/lib /usr/local/sbin /usr/local/share /usr/local/src
+    /usr/local/lib /usr/local/sbin /usr/local/share /usr/local/src /var/tmp
 sed -i 's| /root| /var/roothome|g' /usr/lib/tmpfiles.d/*.conf
 sed -i 's| /home| /var/home|g' /usr/lib/tmpfiles.d/*.conf
 sed -i 's| /srv| /var/srv|g' /usr/lib/tmpfiles.d/*.conf
+
+sbsign \
+  --key /run/secrets/secureboot_key \
+  --cert /run/secrets/secureboot_cert \
+  /usr/lib/systemd/boot/efi/systemd-bootx64.efi
+
+kver=$(ls /target/usr/lib/modules)
+dracut -vf "/usr/lib/modules/${kver}/initramfs.img" "$kver"
+
+rm -rf /var/cache
+bootc container lint
+rm -rf /ostree
+rm -rf /sysroot/ostree
+
 EORUN

@@ -1,0 +1,32 @@
+ARG BASE_IMAGE
+FROM $BASE_IMAGE as base
+
+FROM base as sealed-uki
+ARG KARGS=
+RUN \
+    --mount=type=tmpfs,target=/run --mount=type=tmpfs,target=/tmp \
+    --mount=type=bind,from=base,target=/target \
+    --mount=type=secret,id=secureboot_key \
+    --mount=type=secret,id=secureboot_cert \
+<<EORUN
+set -euo pipefail
+
+mkdir /out
+
+digest=$(bootc container compute-composefs-digest /target)
+
+kver=$(ls /target/usr/lib/modules)
+
+ukify build \
+  --linux "/target/usr/lib/modules/${kver}/vmlinuz" \
+  --initrd "/target/usr/lib/modules/${kver}/initramfs.img" \
+  --cmdline "rw composefs=${digest} ${KARGS}" \
+  --os-release "@/target/usr/lib/os-release" \
+  --signtool sbsign \
+  --secureboot-private-key /run/secrets/secureboot_key \
+  --secureboot-certificate /run/secrets/secureboot_cert \
+  --output "/out/${kver}.efi"
+EORUN
+
+FROM base
+COPY --from=sealed-uki /out/*.efi /boot/EFI/Linux/
