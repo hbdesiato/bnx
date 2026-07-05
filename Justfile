@@ -27,22 +27,28 @@ push $IMAGE=SEALED_IMAGE:
 
 push-unsealed: (push THIS_IMAGE) 
 
+FORMAT_DIGEST:='{{.Digest}}'
 seal $SEALED_IMAGE=SEALED_IMAGE $THIS_IMAGE=THIS_IMAGE:
     #!/usr/bin/env bash
     set -euxo pipefail
     mkdir -p build
     rm -rf build/chunkah
     podman inspect $THIS_IMAGE > build/chunkah.json
+
+    podman pull quay.io/coreos/chunkah
+    chunkah_digest=$(podman image ls --digests --format '{{FORMAT_DIGEST}}' quay.io/coreos/chunkah)
     cosign verify \
         --certificate-oidc-issuer https://token.actions.githubusercontent.com \
         --certificate-identity-regexp '^https://github\.com/coreos/chunkah/' \
-        quay.io/coreos/chunkah:latest
+        "quay.io/coreos/chunkah@${chunkah_digest}"
+
     podman run --rm --mount=type=image,src=$THIS_IMAGE,dest=/chunkah \
         -v ./build:/build:z \
-        quay.io/coreos/chunkah build \
+        "quay.io/coreos/chunkah@${chunkah_digest}" build \
         --max-layers 256 \
         --config /build/chunkah.json \
         --output oci:/build/chunkah
+
     podman build --build-arg BASE_IMAGE="oci:build/chunkah" \
         --build-arg KARGS="quiet rhgb" \
         --secret=id=secureboot_key,src=keys/db/db.key \
