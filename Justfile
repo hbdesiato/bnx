@@ -38,16 +38,13 @@ seal $SEALED_IMAGE=SEALED_IMAGE $THIS_IMAGE=THIS_IMAGE:
 
     podman build --build-arg BASE_IMAGE="$THIS_IMAGE" \
         --build-arg CONFIG_FILE="$CONFIG_FILE" \
-        --security-opt label=disable \
         -f Containerfile.chunk \
-        -t "${THIS_IMAGE}-splitter" .
+        -t "${THIS_IMAGE}-chunked" .
     
     podman run --rm \
         --security-opt label=disable \
         -v ./build/chunkah:/build \
-        "${THIS_IMAGE}-splitter" cp -a /out /build/.
-
-    podman image rm "${THIS_IMAGE}-splitter"
+        "${THIS_IMAGE}-chunked" cp -a /out /build/.
 
     podman build --build-arg BASE_IMAGE="oci:build/chunkah/out" \
         --build-arg KARGS="quiet rhgb" \

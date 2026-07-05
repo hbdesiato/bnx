@@ -3,10 +3,10 @@ FROM $BASE_IMAGE as base
 
 FROM base
 ARG CONFIG_FILE
+COPY $CONFIG_FILE /config.json
 RUN \
     --mount=type=tmpfs,target=/run --mount=type=tmpfs,target=/tmp \
     --mount=type=bind,from=base,target=/target \
-    --mount=type=bind,source=$CONFIG_FILE,target=/config.json \
 <<EORUN
 set -euxo pipefail
 
