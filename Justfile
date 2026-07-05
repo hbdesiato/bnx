@@ -43,7 +43,8 @@ seal $SEALED_IMAGE=SEALED_IMAGE $THIS_IMAGE=THIS_IMAGE:
         "quay.io/coreos/chunkah@${chunkah_digest}"
 
     podman run --rm --mount=type=image,src=$THIS_IMAGE,dest=/chunkah \
-        -v ./build:/build:z \
+        --security-opt label=disable \
+        -v ./build:/build \
         "quay.io/coreos/chunkah@${chunkah_digest}" build \
         --max-layers 256 \
         --config /build/chunkah.json \
