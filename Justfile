@@ -31,26 +31,22 @@ FORMAT_DIGEST:='{{.Digest}}'
 seal $SEALED_IMAGE=SEALED_IMAGE $THIS_IMAGE=THIS_IMAGE:
     #!/usr/bin/env bash
     set -euxo pipefail
-    mkdir -p build
     rm -rf build/chunkah
-    podman inspect $THIS_IMAGE > build/chunkah.json
+    mkdir -p build/chunkah
+    CONFIG_FILE="build/chunkah/config.json"
+    podman inspect $THIS_IMAGE > $CONFIG_FILE
 
-    podman pull quay.io/coreos/chunkah
-    chunkah_digest=$(podman image ls --digests --format '{{FORMAT_DIGEST}}' quay.io/coreos/chunkah)
-    cosign verify \
-        --certificate-oidc-issuer https://token.actions.githubusercontent.com \
-        --certificate-identity-regexp '^https://github\.com/coreos/chunkah/' \
-        "quay.io/coreos/chunkah@${chunkah_digest}"
-
-    podman run --rm --mount=type=image,src=$THIS_IMAGE,dest=/chunkah \
+    podman build --build-arg BASE_IMAGE="$THIS_IMAGE" \
+        --build-arg CONFIG_FILE="$CONFIG_FILE" \
         --security-opt label=disable \
-        -v ./build:/build \
-        "quay.io/coreos/chunkah@${chunkah_digest}" build \
-        --max-layers 256 \
-        --config /build/chunkah.json \
-        --output oci:/build/chunkah
+        -f Containerfile.chunk \
+        -t "${THIS_IMAGE}-splitter" .
+    
+    podman run --rm \
+        --security-opt label=disable \
+        -v ./build/chunkah:/build \
+        "${THIS_IMAGE}-splitter" cp -a /out /build/.
 
-    podman build --build-arg BASE_IMAGE="oci:build/chunkah" \
         --build-arg KARGS="quiet rhgb" \
         --secret=id=secureboot_key,src=keys/db/db.key \
         --secret=id=secureboot_cert,src=keys/db/db.pem \
@@ -149,8 +145,7 @@ generate-config $PROJECT_REPO=PROJECT_REPO:
 gh-setup $PROJECT_REPO=PROJECT_REPO:
     #!/usr/bin/env bash
     set -euxo pipefail
-    which cosign || brew install cosign
-    
+
     git config --global user.name "github-actions[bot]"
     git config --global user.email "github-actions[bot]@users.noreply.github.com"
     just generate-config "${PROJECT_REPO}"

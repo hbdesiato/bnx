@@ -25,7 +25,7 @@ mv /etc/containers/policy.new.json /etc/containers/policy.json
 dnf -y install niri mako swaybg swayidle polkit-kde kf6-kirigami udiskie \
     libappindicator-gtk3 brightnessctl pavucontrol blueman network-manager-applet \
     qemu-system-x86 qemu-img \
-    systemd-boot-unsigned sbsigntools systemd-ukify
+    systemd-boot-unsigned sbsigntools systemd-ukify chunkah
 EORUN
 COPY sysconfig /
 RUN \

@@ -1,0 +1,19 @@
+ARG BASE_IMAGE
+FROM $BASE_IMAGE as base
+
+FROM base
+ARG CONFIG_FILE
+RUN \
+    --mount=type=tmpfs,target=/run --mount=type=tmpfs,target=/tmp \
+    --mount=type=bind,from=base,target=/target \
+    --mount=type=bind,source=$CONFIG_FILE,target=/config.json \
+<<EORUN
+set -euxo pipefail
+
+chunkah build \
+  --rootfs /target \
+  --max-layers 256 \
+  --config /config.json \
+  --output oci:/out
+
+EORUN
