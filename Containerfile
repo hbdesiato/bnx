@@ -46,7 +46,7 @@ sbsign \
   --cert /run/secrets/secureboot_cert \
   /usr/lib/systemd/boot/efi/systemd-bootx64.efi
 
-kver=$(ls /target/usr/lib/modules)
+kver=$(ls /usr/lib/modules)
 dracut -vf "/usr/lib/modules/${kver}/initramfs.img" "$kver"
 
 rm -rf /var/cache
