@@ -53,6 +53,8 @@ semodule -i /usr/lib/bnx-tpm2-setup.cil
 
 kver=$(ls /usr/lib/modules)
 
+rm -f /etc/httpd/logs
+rm -f /etc/httpd/state
 rm -rf /var/cache
 bootc container lint
 EORUN
