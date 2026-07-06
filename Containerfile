@@ -39,7 +39,7 @@ RUN \
 set -euxo pipefail
 
 mkdir -p /usr/local/bin /usr/local/etc /usr/local/games /usr/local/include \
-    /usr/local/lib /usr/local/sbin /usr/local/share /usr/local/src /var/tmp
+    /usr/local/lib /usr/local/sbin /usr/local/share /usr/local/src
 sed -i 's| /root| /var/roothome|g' /usr/lib/tmpfiles.d/*.conf
 sed -i 's| /home| /var/home|g' /usr/lib/tmpfiles.d/*.conf
 sed -i 's| /srv| /var/srv|g' /usr/lib/tmpfiles.d/*.conf
@@ -48,6 +48,8 @@ sbsign \
   --key /run/secrets/secureboot_key \
   --cert /run/secrets/secureboot_cert \
   /usr/lib/systemd/boot/efi/systemd-bootx64.efi
+
+semodule -i /usr/lib/bnx-tpm2-setup.cil
 
 kver=$(ls /usr/lib/modules)
 
