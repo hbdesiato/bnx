@@ -354,3 +354,20 @@ install-to-disk $IMAGE_NAME=PROJECT_NAME: to-disk-mount && to-disk-unmount
         --composefs-backend --bootloader=systemd \
         --skip-finalize \
         /target
+
+loop-setup $IMAGE=PROJECT_NAME: loop-detach
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    NAME="${IMAGE##*/}"
+    NAME="${NAME%:*}"
+    DISK_IMAGE="qemu/${NAME}.raw"
+    rm -f "${DISK_IMAGE}"
+    fallocate -l "{{INSTALL_DISK_SIZE}}" "${DISK_IMAGE}"
+    <target.sfdisk sfdisk "${DISK_IMAGE}"
+    sudo losetup -fP "${DISK_IMAGE}"
+
+loop-detach:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    eval "$(just to-disk-partitions)"
+    [ ! "${TARGET:-}" ] || sudo losetup -d "/dev/${TARGET}"
