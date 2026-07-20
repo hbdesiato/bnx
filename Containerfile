@@ -26,6 +26,7 @@ dnf -y install niri mako swaybg swayidle polkit-kde kf6-kirigami udiskie \
     libappindicator-gtk3 brightnessctl pavucontrol blueman network-manager-applet \
     qemu-system-x86 qemu-img \
     systemd-boot-unsigned sbsigntools systemd-ukify chunkah
+dnf -y upgrade bootc
 EORUN
 COPY sysconfig /
 RUN \
