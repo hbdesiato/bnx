@@ -264,7 +264,7 @@ local-registry:
 to-disk-partitions:
     #!/usr/bin/env bash
     set -euo pipefail
-    PARTS_JSON="$(sudo lsblk -o NAME,PARTTYPE,PARTLABEL --json | jq '
+    PARTS_JSON="$(sudo lsblk -o NAME,PARTTYPE,PARTLABEL,PARTUUID --json | jq '
         .blockdevices[] |
         select(.children != null) |
         select(.children | any(.partlabel == "bootc-TARGET" ) )')"
@@ -276,24 +276,38 @@ to-disk-partitions:
         .children[] | 
         select(.parttype == "4f68bce3-e8cd-4db1-96e7-fbcaf984b709") |
         "ROOT_PART="+.name'
+    <<< "$PARTS_JSON" jq -r '
+        .children[] | 
+        select(.parttype == "4f68bce3-e8cd-4db1-96e7-fbcaf984b709") |
+        "ROOT_PART_UUID="+.partuuid'
+        
 
 to-disk-luks:
     #!/usr/bin/env bash
     set -euxo pipefail
     eval "$(just to-disk-partitions)"
-    echo $EFI_PART
-    echo $ROOT_PART
+    KEY_FILE="luks/${ROOT_PART_UUID}.key"
     LUKS_VOL="luks-${ROOT_PART}"
     sudo systemd-cryptsetup detach "${LUKS_VOL}"
-    sudo cryptsetup erase "/dev/${ROOT_PART}"
-    KEY_FILE="$(mktemp)"
+    sudo cryptsetup erase "/dev/${ROOT_PART}" || true
+    mkdir -p luks
+    umask go=
     openssl rand -base64 32 > "${KEY_FILE}"
-    sudo cryptsetup luksFormat "/dev/${ROOT_PART}" "${KEY_FILE}"
-    sudo systemd-cryptsetup attach "${LUKS_VOL}" "/dev/${ROOT_PART}" "${KEY_FILE}"
-    sudo systemd-cryptenroll --unlock-key-file "${KEY_FILE}" --recovery-key "/dev/${ROOT_PART}"
-    sudo systemd-cryptenroll --unlock-key-file "${KEY_FILE}" --tpm2-device auto --tpm2-with-pin true "/dev/${ROOT_PART}"
-    sudo systemd-cryptenroll --unlock-key-file "${KEY_FILE}" --wipe-slot password "/dev/${ROOT_PART}"
-    rm -f "${KEY_FILE}"
+    sudo cryptsetup luksFormat --pbkdf pbkdf2 -i 1 "/dev/${ROOT_PART}" "${KEY_FILE}"
+
+to-disk-luks-pin:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    eval "$(just to-disk-partitions)"
+    KEY_FILE=$(realpath "luks/${ROOT_PART_UUID}.key")
+    sudo systemd-cryptenroll --unlock-key-file "${KEY_FILE}" --tpm2-device auto --tpm2-with-pin true "/dev/disk/by-partuuid/${ROOT_PART_UUID}"
+
+to-disk-luks-qemu:
+    #!/usr/bin/env bash
+    set -euxo pipefail
+    eval "$(just to-disk-partitions)"
+    KEY_FILE="luks/${ROOT_PART_UUID}.key"
+    sudo cryptsetup luksAddKey --pbkdf pbkdf2 -i 1 -d "${KEY_FILE}" -y --force-password "/dev/${ROOT_PART}" 
 
 to-disk-format:
     #!/usr/bin/env bash
@@ -301,7 +315,8 @@ to-disk-format:
     eval "$(just to-disk-partitions)"
     if sudo cryptsetup isLuks "/dev/${ROOT_PART}"; then
         LUKS_VOL="luks-${ROOT_PART}"
-        sudo systemd-cryptsetup attach "${LUKS_VOL}" "/dev/${ROOT_PART}"
+        KEY_FILE=$(realpath "luks/${ROOT_PART_UUID}.key")
+        sudo systemd-cryptsetup attach "${LUKS_VOL}" "/dev/${ROOT_PART}" "${KEY_FILE}"
         ROOT_DEV="/dev/mapper/${LUKS_VOL}"
     else
         ROOT_DEV="/dev/${ROOT_PART}"
